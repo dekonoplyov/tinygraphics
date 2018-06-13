@@ -1,4 +1,4 @@
-package com.dekonoplev.render.util
+package com.dekonoplyov.render.util
 
 import com.curiouscreature.kotlin.math.Float2
 import com.curiouscreature.kotlin.math.Float3

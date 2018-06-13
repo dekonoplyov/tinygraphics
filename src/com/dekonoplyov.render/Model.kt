@@ -1,14 +1,13 @@
-package com.dekonoplev.render
+package com.dekonoplyov.render
 
 import com.avsievich.image.JavaImage
-import com.avsievich.util.RED
 import com.avsievich.util.argb
 import com.curiouscreature.kotlin.math.Float3
 import com.curiouscreature.kotlin.math.cross
 import com.curiouscreature.kotlin.math.dot
 import com.curiouscreature.kotlin.math.normalize
-import com.dekonoplev.render.util.FastReader
-import com.dekonoplev.render.util.Int2
+import com.dekonoplyov.render.util.FastReader
+import com.dekonoplyov.render.util.Int2
 import java.io.File
 import java.util.*
 

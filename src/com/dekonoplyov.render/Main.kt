@@ -1,12 +1,11 @@
-package com.dekonoplev.render
+package com.dekonoplyov.render
 
 import com.avsievich.image.JavaImage
 import com.avsievich.util.*
 import com.curiouscreature.kotlin.math.Float3
 import com.curiouscreature.kotlin.math.cross
-import com.dekonoplev.render.util.Int2
+import com.dekonoplyov.render.util.Int2
 import kotlin.math.abs
-import java.awt.Color.white
 import kotlin.math.max
 import kotlin.math.min
 
@@ -91,7 +90,7 @@ fun draw_african_head() {
     val image = JavaImage(width, height, false, true)
     val model = Model("model/african_head/african_head.obj")
     model.draw(image, RED)
-    image.save("african_head.png")
+    image.save("results/lesson2/colorful_african_head.png")
 }
 
 fun main(args: Array<String>) {
