@@ -28,7 +28,7 @@ abstract class Image(val width: Int,
 
     operator fun get(x: Int, y: Int): Int {
         return if (flipVertical) {
-            pixels.size - (y + 1) * width + x
+            pixels[pixels.size - (y + 1) * width + x]
         } else {
             pixels[y * width + x]
         }
