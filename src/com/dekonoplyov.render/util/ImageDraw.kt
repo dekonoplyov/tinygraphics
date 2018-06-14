@@ -1,6 +1,7 @@
-package com.dekonoplyov.render
+package com.dekonoplyov.render.util
 
 import com.avsievich.image.JavaImage
+import com.curiouscreature.kotlin.math.Float3
 import com.curiouscreature.kotlin.math.cross
 import kotlin.math.abs
 import kotlin.math.max
@@ -46,19 +47,19 @@ fun JavaImage.line(fromX: Int, fromY: Int, toX: Int, toY: Int, color: Int) {
     }
 }
 
-
-
 fun isPointInsideTriangle(x0: Int, y0: Int, x1: Int, y1: Int, x2: Int, y2: Int,
                           x: Int, y: Int): Boolean {
-    val asX = x - x0
-    val asY = y - y0
+    val barycentric = cross(
+            Float3(x2 - x0, x1 - x0, x0 - x),
+            Float3(y2 - y0, y1 - y0, y0 - y))
 
-    val sAB = (x1 - x0) * asY - (x1 - x0) * asX > 0
+    if (abs(barycentric.z) < 1f) {
+        return false // triangle is degenerate
+    }
 
-    if ((x2 - x0) * asY - (y2 - y0) * asX > 0 == sAB) return false
-
-    return (x2 - x1) * (y - y1) - (y2 - y1) * (x - x1) > 0 == sAB
-
+    return 1 - (barycentric.x + barycentric.y) / barycentric.z >= 0f &&
+            barycentric.y / barycentric.z >= 0f &&
+            barycentric.x / barycentric.z >= 0f
 }
 
 fun JavaImage.triangle(x0: Int, y0: Int, x1: Int, y1: Int, x2: Int, y2: Int, color: Int) {
@@ -67,8 +68,8 @@ fun JavaImage.triangle(x0: Int, y0: Int, x1: Int, y1: Int, x2: Int, y2: Int, col
     val bboxMaxX = max(x0, max(x1, x2))
     val bboxMaxY = max(y0, max(y1, y2))
 
-    for (y in bboxMinY..bboxMaxY) {
-        for (x in bboxMinX..bboxMaxX) {
+    for (x in bboxMinX..bboxMaxX) {
+        for (y in bboxMinY..bboxMaxY) {
             if (isPointInsideTriangle(x0, y0, x1, y1, x2, y2, x, y)) {
                 this[x, y] = color
             }
