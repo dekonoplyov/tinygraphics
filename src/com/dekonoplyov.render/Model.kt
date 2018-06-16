@@ -12,9 +12,10 @@ import java.util.*
 import kotlin.math.roundToInt
 
 class Model(filename: String) {
-    val verts = ArrayList<Float3>()
+    val vertices = ArrayList<Float3>()
     val faces = ArrayList<ArrayList<IntArray>>()
-    val textureVerts = ArrayList<Float3>()
+    val textures = ArrayList<Float3>()
+    val norms = ArrayList<Float3>()
 
     init {
         parse(filename)
@@ -25,9 +26,9 @@ class Model(filename: String) {
 
         while (reader.hasNext()) {
             when (reader.string()) {
-                "v" -> verts.add(reader.float3())
-                "vn" -> reader.float3() // skip vn line
-                "vt" -> textureVerts.add(reader.float3())
+                "v" -> vertices.add(reader.float3())
+                "vn" -> norms.add(reader.float3())
+                "vt" -> textures.add(reader.float3())
                 "f" -> {
                     val face = ArrayList<IntArray>()
                     while (reader.tokenizer().hasMoreTokens()) {
@@ -45,14 +46,14 @@ class Model(filename: String) {
 
         reader.close()
 
-        println("verts# ${verts.size} faces# ${faces.size} textures# ${textureVerts.size}")
+        println("vertices# ${vertices.size} faces# ${faces.size} textures# ${textures.size} normals# ${norms.size}")
     }
 
     fun renderWire(image: JavaImage, color: Int) {
         for (face in faces) {
             for (i in 0..2) {
-                val from = verts[face[i][0]]
-                val to = verts[face[(i + 1) % 3][0]]
+                val from = vertices[face[i][0]]
+                val to = vertices[face[(i + 1) % 3][0]]
                 val x0 = ((from.x + 1.0) * image.width / 2.0).toInt()
                 val y0 = ((from.y + 1.0) * image.height / 2.0).toInt()
                 val x1 = ((to.x + 1.0) * image.width / 2.0).toInt()
@@ -62,10 +63,26 @@ class Model(filename: String) {
         }
     }
 
+    fun getTextureVerts(face: ArrayList<IntArray>): ArrayList<Float3> {
+        return arrayListOf(
+                textures[face[0][1]],
+                textures[face[1][1]],
+                textures[face[2][1]]
+        )
+    }
+
+    fun getNormales(face: ArrayList<IntArray>): ArrayList<Float3> {
+        return arrayListOf(
+                norms[face[0][0]],
+                norms[face[1][0]],
+                norms[face[2][0]]
+        )
+    }
+
     fun render(image: JavaImage, textureMap: BufferedImage) {
         val zBuffer = ZBuffer(image.width, image.height)
 
-        val lightDirection = Float3(0, 0, -1)
+        val lightDirection = normalize(Float3(-1f, -1f, -1f))
         val camera = Float3(0f, 0f, 3f)
 
         fun Float3.toFloat4(): Float4 {
@@ -85,13 +102,13 @@ class Model(filename: String) {
             val textureCoords = Array(3) { Float3() }
 
             for (i in 0..2) {
-                val v = (projection * verts[face[i][0]].toFloat4()).toFloat3()
+                val v = (projection * vertices[face[i][0]].toFloat4()).toFloat3()
                 screenCoords[i].x = ((v.x + 1.0f) * image.width / 2.0f + 0.5f).roundToInt().toFloat()
                 screenCoords[i].y = ((v.y + 1.0f) * image.height / 2.0f + 0.5f).roundToInt().toFloat()
                 screenCoords[i].z = v.z
 
                 worldCoords[i] = v
-                textureCoords[i] = textureVerts[face[i][1]]
+                textureCoords[i] = textures[face[i][1]]
             }
 
             val normalToTriangle = normalize(

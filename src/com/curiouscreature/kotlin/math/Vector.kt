@@ -148,7 +148,6 @@ data class Float2(var x: Float = 0.0f, var y: Float = 0.0f) {
 data class Float3(var x: Float = 0.0f, var y: Float = 0.0f, var z: Float = 0.0f) {
     constructor(v: Float2, z: Float = 0.0f) : this(v.x, v.y, z)
     constructor(v: Float3) : this(v.x, v.y, v.z)
-    constructor(x: Int, y: Int, z: Int) : this(x.toFloat(), y.toFloat(), z.toFloat())
 
     inline var r: Float
         get() = x
