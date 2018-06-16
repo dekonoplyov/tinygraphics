@@ -1,4 +1,4 @@
-package com.dekonoplyov.render.util
+package com.dekonoplyov.renderer.util
 
 import java.awt.image.BufferedImage
 import java.io.BufferedInputStream

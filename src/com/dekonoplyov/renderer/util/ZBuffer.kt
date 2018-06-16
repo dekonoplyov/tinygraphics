@@ -1,4 +1,4 @@
-package com.dekonoplyov.render.util
+package com.dekonoplyov.renderer.util
 
 class ZBuffer(private val width: Int, private val height: Int) {
     private val buffer = FloatArray(width * height) { -Float.MAX_VALUE }

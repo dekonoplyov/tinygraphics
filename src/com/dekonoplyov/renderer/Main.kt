@@ -1,7 +1,6 @@
-package com.dekonoplyov.render
+package com.dekonoplyov.renderer
 
-import com.avsievich.image.JavaImage
-import com.dekonoplyov.render.util.TGAReader
+import com.dekonoplyov.renderer.util.TGAReader
 
 fun draw_african_head() {
     val width = 800

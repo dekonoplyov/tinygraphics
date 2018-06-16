@@ -1,4 +1,4 @@
-package com.dekonoplyov.render.util
+package com.dekonoplyov.renderer.util
 
 import com.avsievich.image.JavaImage
 import com.avsievich.util.blue

@@ -1,11 +1,11 @@
-package com.dekonoplyov.render
+package com.dekonoplyov.renderer
 
 import com.avsievich.image.JavaImage
 import com.curiouscreature.kotlin.math.*
-import com.dekonoplyov.render.util.FastReader
-import com.dekonoplyov.render.util.ZBuffer
-import com.dekonoplyov.render.util.line
-import com.dekonoplyov.render.util.triangle
+import com.dekonoplyov.renderer.util.FastReader
+import com.dekonoplyov.renderer.util.ZBuffer
+import com.dekonoplyov.renderer.util.line
+import com.dekonoplyov.renderer.util.triangle
 import java.awt.image.BufferedImage
 import java.io.File
 import java.util.*

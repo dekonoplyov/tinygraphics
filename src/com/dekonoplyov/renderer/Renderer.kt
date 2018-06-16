@@ -1,10 +1,10 @@
-package com.dekonoplyov.render
+package com.dekonoplyov.renderer
 
 import com.avsievich.image.JavaImage
 import com.avsievich.util.*
 import com.curiouscreature.kotlin.math.*
-import com.dekonoplyov.render.util.ZBuffer
-import com.dekonoplyov.render.util.barycentric
+import com.dekonoplyov.renderer.util.ZBuffer
+import com.dekonoplyov.renderer.util.barycentric
 import java.awt.image.BufferedImage
 import java.util.ArrayList
 import kotlin.math.max
