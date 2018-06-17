@@ -18,7 +18,7 @@ class ZBuffer(private val width: Int, private val height: Int) {
             return Float.MAX_VALUE
         }
         if ((x + y * width).toInt() >= buffer.size) {
-            return -Float.MAX_VALUE
+            return Float.MAX_VALUE
         }
         return buffer[(x + y * width).toInt()]
     }

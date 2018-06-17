@@ -9,86 +9,124 @@ import java.awt.image.BufferedImage
 import java.util.ArrayList
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 class Renderer(val width: Int, val height: Int) {
+    private val depth = 255
     val image = JavaImage(width, height,false, true)
-    val zBuffer = ZBuffer(width, height)
-    val lightDirection = normalize(Float3(1f, 1f, 1f))
-    val camera = Float3(0f, 0f, 3f)
-    val projection = Mat4()
+    private val zBuffer = ZBuffer(width, height)
 
-    init {
-        projection[2, 3] = -1 / camera.z
+    val lightDirection = normalize(Float3(1f, -1f, 1f))
+    val eye = Float3(1f, 1f, 3f)
+    val center = Float3(0f, 0f, 0f)
+    val up = Float3(0f, 1f, 0f)
+
+    val projection = projection(eye, center)
+    val view = view(eye, center, up)
+    val viewport = viewport(width / 8, height / 8, 3 * width / 4, 3 * height / 4)
+
+    val transform = viewport * projection * view
+
+    fun render(model: Model, textureMap: BufferedImage) {
+        for (face in model.faces) {
+            drawFace(model, textureMap, face)
+        }
     }
 
-    fun triangle(model: Model, textureMap: BufferedImage, face: ArrayList<IntArray>) {
-        val a = toScreenCoordinates(model.vertices[face[0][0]])
-        val b = toScreenCoordinates(model.vertices[face[1][0]])
-        val c = toScreenCoordinates(model.vertices[face[2][0]])
+    private fun drawFace(model: Model, textureMap: BufferedImage, face: ArrayList<IntArray>) {
+        val a = screenCoordinates(model.vertices[face[0][0]])
+        val b = screenCoordinates(model.vertices[face[1][0]])
+        val c = screenCoordinates(model.vertices[face[2][0]])
 
-        val bboxMin = Float2(min(a.x, min(b.x, c.x)), min(a.y, min(b.y, c.y)))
-        val bboxMax = Float2(max(a.x, max(b.x, c.x)), max(a.y, max(b.y, c.y)))
+        val faceTextures = model.getTextureVerts(face)
+        val intensities = getIntensities(model, face)
 
-        val faceTextureVerts = model.getTextureVerts(face)
-        val normals = model.getNormales(face)
-        val intensities = arrayOf(
-                dot(normals[0], lightDirection),
-                dot(normals[1], lightDirection),
-                dot(normals[2], lightDirection))
+        val p = Float3()
 
-        val p = Float3(bboxMin.x, bboxMin.y)
-        while (p.x in (bboxMin.x..bboxMax.x)) {
-            while (p.y in (bboxMin.y..bboxMax.y)) {
+        for (x in getXRange(a, b, c)) {
+            for (y in getYRange(a, b, c)) {
+                p.x = x.toFloat()
+                p.y = y.toFloat()
+
                 val bc = barycentric(a, b, c, p)
 
                 if (bc.x < 0f || bc.y < 0f || bc.z < 0f) {
-                    p.y += 1f
                     continue
                 }
 
-                p.z = a.z * bc.x + b.z * bc.y + c.z * bc.z
                 // bc.x corresponds to a, because of argument order in barycentric call
+                p.z = a.z * bc.x + b.z * bc.y + c.z * bc.z
 
                 if (zBuffer[p.x, p.y] < p.z) {
                     zBuffer[p.x, p.y] = p.z
 
                     val textureCoordinates =
-                            faceTextureVerts[0] * bc.x + faceTextureVerts[1] * bc.y + faceTextureVerts[2] * bc.z
+                            faceTextures[0] * bc.x + faceTextures[1] * bc.y + faceTextures[2] * bc.z
                     textureCoordinates.x *= textureMap.width
                     textureCoordinates.y *= textureMap.height
 
                     val textureColor = textureMap.getRGB(textureCoordinates.x.toInt(), textureCoordinates.y.toInt())
 
-                    val intensity = intensities[0] * bc.x + intensities[1] * bc.y + intensities[2] * bc.z
-                    if (intensity > 0) {
-                        image[p.x.toInt(), p.y.toInt()] = rgb(
-                                (textureColor.red() * intensity).toInt(),
-                                (textureColor.green() * intensity).toInt(),
-                                (textureColor.blue() * intensity).toInt())
-                    }
+                    val intensity = clamp(intensities[0] * bc.x + intensities[1] * bc.y + intensities[2] * bc.z, 0f,1f)
+                    image[x, y] = rgb(
+                            (textureColor.red() * intensity).toInt(),
+                            (textureColor.green() * intensity).toInt(),
+                            (textureColor.blue() * intensity).toInt())
                 }
-
-                p.y += 1f
             }
-
-            p.x += 1f
-            p.y = bboxMin.y
         }
     }
 
-    fun render(model: Model, textureMap: BufferedImage) {
-        for (face in model.faces) {
-            triangle(model, textureMap, face)
-        }
+    private fun getXRange(a: Float3, b: Float3, c: Float3): IntRange {
+        return min(a.x, min(b.x, c.x)).toInt()..(max(a.x, max(b.x, c.x)).toInt() + 1)
     }
 
-    private fun toScreenCoordinates(v: Float3): Float3 {
-        val p = toFloat3(projection * toFloat4(v))
-        p.x = ((p.x + 1.0f) * image.width / 2.0f + 0.5f).roundToInt().toFloat()
-        p.y = ((p.y + 1.0f) * image.height / 2.0f + 0.5f).roundToInt().toFloat()
-        p.z = p.z
-        return p
+    private fun getYRange(a: Float3, b: Float3, c: Float3): IntRange {
+        return min(a.y, min(b.y, c.y)).toInt()..(max(a.y, max(b.y, c.y)).toInt() + 1)
+    }
+
+    private fun getIntensities(model: Model, face: ArrayList<IntArray>): FloatArray {
+        val normals = model.getNormales(face)
+        return floatArrayOf(
+                dot(normals[0], lightDirection),
+                dot(normals[1], lightDirection),
+                dot(normals[2], lightDirection))
+    }
+
+    private fun projection(eye: Float3, center: Float3): Mat4 {
+        val m = Mat4()
+        m[2, 3] = -1 / distance(eye, center)
+        return m
+    }
+
+    private fun view(eye: Float3, center: Float3, up: Float3): Mat4 {
+        val z = normalize(eye - center)
+        val x = normalize(cross(up, z))
+        val y = normalize(cross(z, x))
+        val res = Mat4()
+        for (i in 0..2) {
+            res[i][0] = x[i]
+            res[i][1] = y[i]
+            res[i][2] = z[i]
+            res[3][i] = -center[i]
+        }
+        return res
+    }
+
+    //[x,x+w]*[y,y+h]*[0,d]
+    private fun viewport(x: Int, y: Int, w: Int, h: Int): Mat4 {
+        val m = Mat4()
+        m[3][0] = x + w / 2.0f
+        m[3][1] = y + h / 2.0f
+        m[3][2] = depth / 2.0f
+
+        m[0][0] = w / 2.0f
+        m[1][1] = h / 2.0f
+        m[2][2] = depth / 2.0f
+        return m
+    }
+
+    private fun screenCoordinates(v: Float3): Float3 {
+        return toFloat3(transform * toFloat4(v))
     }
 
     private fun toFloat4(v: Float3): Float4 {
