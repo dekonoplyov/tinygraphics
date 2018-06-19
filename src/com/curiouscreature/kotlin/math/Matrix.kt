@@ -80,6 +80,8 @@ data class Mat2(
     operator fun times(v: Float) = Mat2(x * v, y * v)
     operator fun div(v: Float) = Mat2(x / v, y / v)
 
+    operator fun plus(m: Mat2) = Mat2(x + m.x, y + m.y)
+    operator fun minus(m: Mat2) = Mat2(x - m.x, y - m.y)
     operator fun times(m: Mat2): Mat2 {
         val t = transpose(this)
         return Mat2(
@@ -385,8 +387,80 @@ fun transpose(m: Mat4) = Mat4(
         Float4(m.x.z, m.y.z, m.z.z, m.w.z),
         Float4(m.x.w, m.y.w, m.z.w, m.w.w)
 )
+
 fun inverse(m: Mat4): Mat4 {
-    TODO("Implement inverse(Mat4)") // TODO
+    val result = Mat4()
+    val pairs = FloatArray(12)
+
+    pairs[0]  = m[2, 2] * m[3, 3]
+    pairs[1]  = m[3, 2] * m[2, 3]
+    pairs[2]  = m[1, 2] * m[3, 3]
+    pairs[3]  = m[3, 2] * m[1, 3]
+    pairs[4]  = m[1, 2] * m[2, 3]
+    pairs[5]  = m[2, 2] * m[1, 3]
+    pairs[6]  = m[0, 2] * m[3, 3]
+    pairs[7]  = m[3, 2] * m[0, 3]
+    pairs[8]  = m[0, 2] * m[2, 3]
+    pairs[9]  = m[2, 2] * m[0, 3]
+    pairs[10] = m[0, 2] * m[1, 3]
+    pairs[11] = m[1, 2] * m[0, 3]
+
+    result[0, 0] = pairs[0] * m[1, 1] + pairs[3] * m[2, 1] + pairs[4] * m[3, 1]
+    result[0, 0] -= pairs[1] * m[1, 1] + pairs[2] * m[2, 1] + pairs[5] * m[3, 1]
+    result[0, 1] = pairs[1] * m[0, 1] + pairs[6] * m[2, 1] + pairs[9] * m[3, 1]
+    result[0, 1] -= pairs[0] * m[0, 1] + pairs[7] * m[2, 1] + pairs[8] * m[3, 1]
+    result[0, 2] = pairs[2] * m[0, 1] + pairs[7] * m[1, 1] + pairs[10] * m[3, 1]
+    result[0, 2] -= pairs[3] * m[0, 1] + pairs[6] * m[1, 1] + pairs[11] * m[3, 1]
+    result[0, 3] = pairs[5] * m[0, 1] + pairs[8] * m[1, 1] + pairs[11] * m[2, 1]
+    result[0, 3] -= pairs[4] * m[0, 1] + pairs[9] * m[1, 1] + pairs[10] * m[2, 1]
+    result[1, 0] = pairs[1] * m[1, 0] + pairs[2] * m[2, 0] + pairs[5] * m[3, 0]
+    result[1, 0] -= pairs[0] * m[1, 0] + pairs[3] * m[2, 0] + pairs[4] * m[3, 0]
+    result[1, 1] = pairs[0] * m[0, 0] + pairs[7] * m[2, 0] + pairs[8] * m[3, 0]
+    result[1, 1] -= pairs[1] * m[0, 0] + pairs[6] * m[2, 0] + pairs[9] * m[3, 0]
+    result[1, 2] = pairs[3] * m[0, 0] + pairs[6] * m[1, 0] + pairs[11] * m[3, 0]
+    result[1, 2] -= pairs[2] * m[0, 0] + pairs[7] * m[1, 0] + pairs[10] * m[3, 0]
+    result[1, 3] = pairs[4] * m[0, 0] + pairs[9] * m[1, 0] + pairs[10] * m[2, 0]
+    result[1, 3] -= pairs[5] * m[0, 0] + pairs[8] * m[1, 0] + pairs[11] * m[2, 0]
+
+    pairs[0] = m[2, 0] * m[3, 1]
+    pairs[1] = m[3, 0] * m[2, 1]
+    pairs[2] = m[1, 0] * m[3, 1]
+    pairs[3] = m[3, 0] * m[1, 1]
+    pairs[4] = m[1, 0] * m[2, 1]
+    pairs[5] = m[2, 0] * m[1, 1]
+    pairs[6] = m[0, 0] * m[3, 1]
+    pairs[7] = m[3, 0] * m[0, 1]
+    pairs[8] = m[0, 0] * m[2, 1]
+    pairs[9] = m[2, 0] * m[0, 1]
+    pairs[10] = m[0, 0] * m[1, 1]
+    pairs[11] = m[1, 0] * m[0, 1]
+
+    result[2][0] = pairs[0] * m[1, 3] + pairs[3] * m[2, 3] + pairs[4] * m[3, 3]
+    result[2][0] -= pairs[1] * m[1, 3] + pairs[2] * m[2, 3] + pairs[5] * m[3, 3]
+    result[2][1] = pairs[1] * m[0, 3] + pairs[6] * m[2, 3] + pairs[9] * m[3, 3]
+    result[2][1] -= pairs[0] * m[0, 3] + pairs[7] * m[2, 3] + pairs[8] * m[3, 3]
+    result[2][2] = pairs[2] * m[0, 3] + pairs[7] * m[1, 3] + pairs[10] * m[3, 3]
+    result[2][2] -= pairs[3] * m[0, 3] + pairs[6] * m[1, 3] + pairs[11] * m[3, 3]
+    result[2][3] = pairs[5] * m[0, 3] + pairs[8] * m[1, 3] + pairs[11] * m[2, 3]
+    result[2][3] -= pairs[4] * m[0, 3] + pairs[9] * m[1, 3] + pairs[10] * m[2, 3]
+    result[3][0] = pairs[2] * m[2, 2] + pairs[5] * m[3, 2] + pairs[1] * m[1, 2]
+    result[3][0] -= pairs[4] * m[3, 2] + pairs[0] * m[1, 2] + pairs[3] * m[2, 2]
+    result[3][1] = pairs[8] * m[3, 2] + pairs[0] * m[0, 2] + pairs[7] * m[2, 2]
+    result[3][1] -= pairs[6] * m[2, 2] + pairs[9] * m[3, 2] + pairs[1] * m[0, 2]
+    result[3][2] = pairs[6] * m[1, 2] + pairs[11] * m[3, 2] + pairs[3] * m[0, 2]
+    result[3][2] -= pairs[10] * m[3, 2] + pairs[2] * m[0, 2] + pairs[7] * m[1, 2]
+    result[3][3] = pairs[10] * m[2, 2] + pairs[4] * m[0, 2] + pairs[9] * m[1, 2]
+    result[3][3] -= pairs[8] * m[1, 2] + pairs[11] * m[2, 2] + pairs[5] * m[0, 2]
+
+    val det = 1 / (m[0][0] * result[0][0] + m[1][0] * result[0][1] + m[2][0] * result[0][2] + m[3][0] * result[0][3])
+
+    for (i in 0..3) {
+        for (j in 0..3) {
+            result[i][j] *= det
+        }
+    }
+
+    return result
 }
 
 fun scale(s: Float3) = Mat4(Float4(x = s.x), Float4(y = s.y), Float4(z = s.z))
