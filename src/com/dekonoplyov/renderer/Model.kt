@@ -2,10 +2,7 @@ package com.dekonoplyov.renderer
 
 import com.avsievich.image.JavaImage
 import com.curiouscreature.kotlin.math.*
-import com.dekonoplyov.renderer.util.FastReader
-import com.dekonoplyov.renderer.util.ZBuffer
-import com.dekonoplyov.renderer.util.line
-import com.dekonoplyov.renderer.util.triangle
+import com.dekonoplyov.renderer.util.*
 import java.awt.image.BufferedImage
 import java.io.File
 import java.util.*
@@ -16,6 +13,9 @@ class Model(filename: String) {
     val faces = ArrayList<ArrayList<IntArray>>()
     val textures = ArrayList<Float3>()
     val norms = ArrayList<Float3>()
+
+    var textureMap: BufferedImage? = null
+    var diffuse: BufferedImage? = null
 
     init {
         parse(filename)
@@ -47,6 +47,14 @@ class Model(filename: String) {
         reader.close()
 
         println("vertices# ${vertices.size} faces# ${faces.size} textures# ${textures.size} normals# ${norms.size}")
+    }
+
+    fun setTexture(filename: String) {
+        textureMap = TGAReader.getImage(filename)
+    }
+
+    fun setDiffuse(filename: String) {
+        diffuse = TGAReader.getImage(filename)
     }
 
     fun renderWire(image: JavaImage, color: Int) {

@@ -67,3 +67,10 @@ fun Int.toColorFloat3() = Float3(
         this.red().toFloat() / 255f,
         this.green().toFloat() / 255f,
         this.blue().toFloat() / 255f)
+
+fun Int.applyIntesity(intensity: Float): Int {
+    return rgb(
+            (this.red() * intensity).toInt(),
+            (this.green() * intensity).toInt(),
+            (this.blue() * intensity).toInt())
+}

@@ -1,5 +1,6 @@
 package com.dekonoplyov.renderer.util
 
+import com.avsievich.image.JavaImage
 import java.awt.image.BufferedImage
 import java.io.BufferedInputStream
 import java.io.File

@@ -13,5 +13,8 @@ fun draw_african_head() {
 }
 
 fun main(args: Array<String>) {
-    draw_african_head()
+//    draw_african_head()
+    val model = Model("model/african_head/african_head.obj")
+    val image = drawModel(model)
+    image.save("output.png")
 }
