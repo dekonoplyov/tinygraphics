@@ -1,10 +1,7 @@
 package com.dekonoplyov.renderer
 
-import com.avsievich.image.JavaImage
-import com.avsievich.util.*
 import com.curiouscreature.kotlin.math.*
-import com.dekonoplyov.renderer.util.ZBuffer
-import com.dekonoplyov.renderer.util.barycentric
+import com.dekonoplyov.renderer.util.*
 import java.awt.image.BufferedImage
 import java.util.ArrayList
 import kotlin.math.max
@@ -12,7 +9,7 @@ import kotlin.math.min
 
 class Renderer(val width: Int, val height: Int) {
     private val depth = 255
-    val image = JavaImage(width, height,false, true)
+    val image = PixelImage(width, height,false)
     private val zBuffer = ZBuffer(width, height)
 
     val lightDirection = normalize(Float3(1f, -1f, 1f))

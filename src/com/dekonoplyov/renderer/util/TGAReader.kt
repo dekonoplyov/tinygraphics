@@ -1,100 +1,164 @@
 package com.dekonoplyov.renderer.util
 
-import com.avsievich.image.JavaImage
-import java.awt.image.BufferedImage
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
-import java.io.IOException
 
-internal object TGAReader {
-    private var offset: Int = 0
+class TGAHeader {
+    var idLength: Int = 0
+    var colorMapType: Int = 0
+    var dataTypeCode: Int = 0
+    var colorMapOrigin: Int = 0 // 16 bits
+    var colorMapLength: Int = 0 // 16 bits
+    var colorMapDepth: Int = 0
+    var xOrigin: Int = 0 // 16 bits
+    var yOrigin: Int = 0 // 16 bits
+    var width: Int = 0   // 16 bits
+    var height: Int = 0  // 16 bits
+    var bytesPerPixel: Int = 0
+    var imageDescriptor: Int = 0
 
-    @Throws(IOException::class)
-    fun getImage(fileName: String): BufferedImage {
-        val f = File(fileName)
+    enum class ColorFormat(val bytesPerPixel: Int) {
+        GrayScale(1),
+        RGB(3),
+        RGBA(4)
+    }
+
+    fun isGrayScale(): Boolean {
+        return bytesPerPixel == ColorFormat.GrayScale.bytesPerPixel
+    }
+
+    fun isRGB(): Boolean {
+        return bytesPerPixel == ColorFormat.RGB.bytesPerPixel
+    }
+
+    fun isRGBA(): Boolean {
+        return bytesPerPixel == ColorFormat.RGBA.bytesPerPixel
+    }
+
+    fun isUncompressed(): Boolean {
+        return dataTypeCode == 1 || dataTypeCode == 2
+    }
+
+    fun isRLECompressed(): Boolean {
+        return dataTypeCode == 10 || dataTypeCode == 11
+    }
+
+    fun isFlippedVertical(): Boolean {
+        return imageDescriptor and 0x20 == 0
+    }
+
+    fun isFlippedHorizontal(): Boolean {
+        return imageDescriptor and 0x10 != 0
+    }
+}
+
+class TGAData(val header: TGAHeader, val pixels: IntArray)
+
+class TGAReader(filename: String) {
+    private var offset = 0
+    private var buf = readByteArray(filename)
+
+    private fun readByteArray(filename: String): ByteArray {
+        val f = File(filename)
         val buf = ByteArray(f.length().toInt())
         val bis = BufferedInputStream(FileInputStream(f))
         bis.read(buf)
         bis.close()
-        return decode(buf)
+        return buf
     }
 
     private fun btoi(b: Byte): Int {
-        val a = b.toInt()
-        return if (a < 0) 256 + a else a
+        val i = b.toInt()
+        return if (i < 0) i + 256 else i
     }
 
-    private fun read(buf: ByteArray): Int {
+    private fun read(): Int {
         return btoi(buf[offset++])
     }
 
-    fun decode(buf: ByteArray): BufferedImage {
+    private fun read16(): Int {
+        return read() or (read() shl 8)
+    }
+
+    private fun readHeader(): TGAHeader {
         offset = 0
+        val header = TGAHeader()
+        header.idLength = read()
+        header.colorMapType = read()
+        header.dataTypeCode = read()
+        header.colorMapOrigin = read16()
+        header.colorMapLength = read16()
+        header.colorMapDepth = read()
+        header.xOrigin = read16()
+        header.yOrigin = read16()
+        header.width = read16()
+        header.height = read16()
+        header.bytesPerPixel = read() shr 3
+        header.imageDescriptor = read()
+        return header
+    }
 
-        // Reading header bytes
-        // buf[2]=image type code 0x02=uncompressed BGR or BGRA
-        // buf[12]+[13]=width
-        // buf[14]+[15]=height
-        // buf[16]=image pixel size 0x20=32bit, 0x18=24bit
-        // buf{17]=Image Descriptor Byte=0x28 (00101000)=32bit/origin upperleft/non-interleaved
-        for (i in 0..11)
-            read(buf)
-        val width = read(buf) + (read(buf) shl 8)   // 00,04=1024
-        val height = read(buf) + (read(buf) shl 8)  // 40,02=576
-        read(buf)
-        read(buf)
+    fun getData(): TGAData {
+        val header = readHeader()
+        val image = TGAData(header, IntArray(header.width * header.height))
 
-        var n = width * height
-        val pixels = IntArray(n)
-        var idx = 0
-
-        if (buf[2].toInt() == 0x02 && buf[16].toInt() == 0x20) { // uncompressed BGRA
-            while (n > 0) {
-                val b = read(buf)
-                val g = read(buf)
-                val r = read(buf)
-                val a = read(buf)
-                val v = a shl 24 or (r shl 16) or (g shl 8) or b
-                pixels[idx++] = v
-                n -= 1
-            }
-        } else if (buf[2].toInt() == 0x02 && buf[16].toInt() == 0x18) {  // uncompressed BGR
-            while (n > 0) {
-                val b = read(buf)
-                val g = read(buf)
-                val r = read(buf)
-                val a = 255 // opaque pixel
-                val v = a shl 24 or (r shl 16) or (g shl 8) or b
-                pixels[idx++] = v
-                n -= 1
-            }
-        } else {
-            // RLE compressed
-            while (n > 0) {
-                var nb = read(buf) // num of pixels
-                if (nb and 0x80 == 0) { // 0x80=dec 128, bits 10000000
-                    for (i in 0..nb) {
-                        val b = read(buf)
-                        val g = read(buf)
-                        val r = read(buf)
-                        pixels[idx++] = -0x1000000 or (r shl 16) or (g shl 8) or b
-                    }
-                } else {
-                    nb = nb and 0x7f
-                    val b = read(buf)
-                    val g = read(buf)
-                    val r = read(buf)
-                    val v = -0x1000000 or (r shl 16) or (g shl 8) or b
-                    for (i in 0..nb)
-                        pixels[idx++] = v
-                }
-                n -= nb + 1
-            }
+        if (header.isRLECompressed()) {
+            readCompressed(image.header, image.pixels)
+        } else if (header.isUncompressed()) {
+            readUncompressed(image.header, image.pixels)
         }
 
-        val bimg = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
-        bimg.setRGB(0, 0, width, height, pixels, 0, width)
-        return bimg
+        return image
+    }
+
+    private fun readUncompressed(header: TGAHeader, pixels: IntArray) {
+        var pixelIdx = 0
+        while (pixelIdx < pixels.size) {
+            pixels[pixelIdx++] = readColor(header.bytesPerPixel)
+        }
+    }
+
+    private fun readCompressed(header: TGAHeader, pixels: IntArray) {
+        var pixelIdx = 0
+        while (pixelIdx < pixels.size) {
+            var chunkheader = read()
+            if (chunkheader < 128) {
+                ++chunkheader
+                for (i in 0 until chunkheader) {
+                    val color = readColor(header.bytesPerPixel)
+                    pixels[pixelIdx++] = color
+                }
+            } else {
+                chunkheader -= 127
+                val color = readColor(header.bytesPerPixel)
+                for (i in 0 until chunkheader) {
+                    pixels[pixelIdx++] = color
+                }
+            }
+        }
+    }
+
+    private fun readColor(bytesPerPixel: Int): Int {
+        when (bytesPerPixel) {
+            1 -> {
+                val v = read()
+                return rgb(v, v, v)
+            }
+            3 -> {
+                val b = read()
+                val g = read()
+                val r = read()
+                return rgb(r, g, b)
+            }
+            4 -> {
+                val b = read()
+                val g = read()
+                val r = read()
+                val a = read()
+                return argb(a, r, g, b)
+            }
+            else -> throw RuntimeException("some shit")
+        }
     }
 }

@@ -1,10 +1,8 @@
 package com.dekonoplyov.renderer
 
-import com.avsievich.image.JavaImage
-import com.avsievich.util.*
 import com.curiouscreature.kotlin.math.*
-import com.dekonoplyov.renderer.util.ZBuffer
-import com.dekonoplyov.renderer.util.barycentric
+import com.dekonoplyov.renderer.util.*
+import java.awt.image.BufferedImage
 import java.util.ArrayList
 import kotlin.math.max
 import kotlin.math.min
@@ -54,35 +52,38 @@ fun toFloat3(v: Float4): Float3 {
     return v.xyz / v.w
 }
 
-class GouraudShader(val model: Model) : BaseShader() {
-    val varyingIntensity = Float3()
+class Shader(val model: Model, val textureMap: BufferedImage, val normalMap: BufferedImage) : BaseShader() {
+    val varyingUV = Array(3) { Float3() }
     var uniformMVP = Mat4()
+    var uniformMVPIT = Mat4()
     var uniformLightDir = Float3()
 
     override fun vertex(face: ArrayList<IntArray>, vertIdx: Int): Float3 {
-        varyingIntensity[vertIdx] = dot(model.getNormales(face)[vertIdx], uniformLightDir)
+        varyingUV[vertIdx] = model.getTextureVerts(face)[vertIdx]
         return toFloat3(uniformMVP * toFloat4(model.vertices[face[vertIdx][0]]))
     }
 
     override fun fragment(bar: Float3, color: Int): Int {
-        val intensity = clamp(dot(varyingIntensity, bar), 0f,1f)
-        if (intensity>.85) return color.applyIntesity(1f)
-        else if (intensity>.60) return color.applyIntesity(0.8f)
-        else if (intensity>.45) return color.applyIntesity(0.60f)
-        else if (intensity>.30) return color.applyIntesity(0.45f)
-        else if (intensity>.15) return color.applyIntesity(0.3f)
-        else return color.applyIntesity(0f)
+        val textureCoords = varyingUV[0] * bar.x + varyingUV[1] * bar.y + varyingUV[2] * bar.z
+        val u = (textureCoords.x * textureMap.width).toInt()
+        val v = (textureCoords.y * textureMap.height).toInt()
+
+        val np = normalMap.getRGB(u, v)
+        val n = normalize(Float3(np.red() / 255f * 2 - 1, np.green() / 255f * 2 - 1, np.blue() / 255f * 2 - 1))
+        val intensity = clamp(dot(n, uniformLightDir), 0f,1f)
+
+        return textureMap.getRGB(u ,v).applyIntesity(intensity)
     }
 }
 
-fun drawModel(model: Model): JavaImage {
+fun drawModel(model: Model, textureMap: BufferedImage, normalMap: BufferedImage): PixelImage {
     val width = 800
     val height = 800
-    val image = JavaImage(width, height, false, true)
+    val image = PixelImage(width, height, false)
     val zBuffer = ZBuffer(width, height)
 
     val lightDirection = normalize(Float3(1f, 1f, 1f))
-    val eye = Float3(1f, -1f, 3f)
+    val eye = Float3(1f, 1f, 3f)
     val center = Float3(0f, 0f, 0f)
     val up = Float3(0f, 1f, 0f)
 
@@ -90,8 +91,9 @@ fun drawModel(model: Model): JavaImage {
     val view = viewModel(eye, center, up)
     val viewport = viewPort(width / 8, height / 8, 3 * width / 4, 3 * height / 4, 255)
 
-    val shader = GouraudShader(model)
+    val shader = Shader(model, textureMap, normalMap)
     shader.uniformMVP = viewport * projection * view
+    shader.uniformMVPIT = transpose(inverse(viewport * projection * view))
     shader.uniformLightDir = lightDirection
 
     for (face in model.faces) {
@@ -107,7 +109,7 @@ fun drawModel(model: Model): JavaImage {
 }
 
 fun triangle(screenCoords: Array<Float3>, shader: BaseShader,
-             image: JavaImage, zBuffer: ZBuffer) {
+             image: PixelImage, zBuffer: ZBuffer) {
     for (x in getXRange(screenCoords[0], screenCoords[1], screenCoords[2])) {
         for (y in getYRange(screenCoords[0], screenCoords[1], screenCoords[2])) {
             val p = Float3(x.toFloat(), y.toFloat(), 0f)

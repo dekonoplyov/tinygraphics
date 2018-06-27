@@ -1,6 +1,5 @@
 package com.dekonoplyov.renderer
 
-import com.avsievich.image.JavaImage
 import com.curiouscreature.kotlin.math.*
 import com.dekonoplyov.renderer.util.*
 import java.awt.image.BufferedImage
@@ -49,15 +48,7 @@ class Model(filename: String) {
         println("vertices# ${vertices.size} faces# ${faces.size} textures# ${textures.size} normals# ${norms.size}")
     }
 
-    fun setTexture(filename: String) {
-        textureMap = TGAReader.getImage(filename)
-    }
-
-    fun setDiffuse(filename: String) {
-        diffuse = TGAReader.getImage(filename)
-    }
-
-    fun renderWire(image: JavaImage, color: Int) {
+    fun renderWire(image: PixelImage, color: Int) {
         for (face in faces) {
             for (i in 0..2) {
                 val from = vertices[face[i][0]]
@@ -87,7 +78,7 @@ class Model(filename: String) {
         )
     }
 
-    fun render(image: JavaImage, textureMap: BufferedImage) {
+    fun render(image: PixelImage, textureMap: BufferedImage) {
         val zBuffer = ZBuffer(image.width, image.height)
 
         val lightDirection = normalize(Float3(-1f, -1f, -1f))

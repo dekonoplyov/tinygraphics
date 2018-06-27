@@ -1,10 +1,5 @@
 package com.dekonoplyov.renderer.util
 
-import com.avsievich.image.JavaImage
-import com.avsievich.util.blue
-import com.avsievich.util.green
-import com.avsievich.util.red
-import com.avsievich.util.rgb
 import com.curiouscreature.kotlin.math.Float2
 import com.curiouscreature.kotlin.math.Float3
 import com.curiouscreature.kotlin.math.cross
@@ -13,7 +8,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
-fun JavaImage.line(fromX: Int, fromY: Int, toX: Int, toY: Int, color: Int) {
+fun PixelImage.line(fromX: Int, fromY: Int, toX: Int, toY: Int, color: Int) {
     var x0 = fromX
     var y0 = fromY
     var x1 = toX
@@ -68,7 +63,7 @@ fun barycentric(a: Float3, b: Float3, c: Float3, p: Float3): Float3 {
             cross.x / cross.z)
 }
 
-fun JavaImage.triangle(a: Float3, b: Float3, c: Float3, zBuffer: ZBuffer, color: Int) {
+fun PixelImage.triangle(a: Float3, b: Float3, c: Float3, zBuffer: ZBuffer, color: Int) {
     val bboxMin = Float2(min(a.x, min(b.x, c.x)), min(a.y, min(b.y, c.y)))
     val bboxMax = Float2(max(a.x, max(b.x, c.x)), max(a.y, max(b.y, c.y)))
 
@@ -101,7 +96,7 @@ fun JavaImage.triangle(a: Float3, b: Float3, c: Float3, zBuffer: ZBuffer, color:
     }
 }
 
-fun JavaImage.triangle(a: Float3, b: Float3, c: Float3, zBuffer: ZBuffer,
+fun PixelImage.triangle(a: Float3, b: Float3, c: Float3, zBuffer: ZBuffer,
                        t0: Float3, t1: Float3, t2: Float3,
                        textureMap: BufferedImage, intensity: Float) {
     val bboxMin = Float2(min(a.x, min(b.x, c.x)), min(a.y, min(b.y, c.y)))
