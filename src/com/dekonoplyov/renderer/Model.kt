@@ -2,10 +2,8 @@ package com.dekonoplyov.renderer
 
 import com.curiouscreature.kotlin.math.*
 import com.dekonoplyov.renderer.util.*
-import java.awt.image.BufferedImage
 import java.io.File
 import java.util.*
-import kotlin.math.roundToInt
 
 class Model(filename: String) {
     val vertices = ArrayList<Float3>()
@@ -13,8 +11,9 @@ class Model(filename: String) {
     val textures = ArrayList<Float3>()
     val norms = ArrayList<Float3>()
 
-    var textureMap: BufferedImage? = null
-    var diffuse: BufferedImage? = null
+    var textureMap: PixelImage? = null
+    var normalMap: PixelImage? = null
+    var specMap: PixelImage? = null
 
     init {
         parse(filename)
@@ -57,7 +56,7 @@ class Model(filename: String) {
                 val y0 = ((from.y + 1.0) * image.height / 2.0).toInt()
                 val x1 = ((to.x + 1.0) * image.width / 2.0).toInt()
                 val y1 = ((to.y + 1.0) * image.height / 2.0).toInt()
-                image.line(x0, y0, x1, y1, color)
+                line(x0, y0, x1, y1, color, image)
             }
         }
     }
@@ -76,49 +75,5 @@ class Model(filename: String) {
                 norms[face[1][0]],
                 norms[face[2][0]]
         )
-    }
-
-    fun render(image: PixelImage, textureMap: BufferedImage) {
-        val zBuffer = ZBuffer(image.width, image.height)
-
-        val lightDirection = normalize(Float3(-1f, -1f, -1f))
-        val camera = Float3(0f, 0f, 3f)
-
-        fun Float3.toFloat4(): Float4 {
-            return Float4(this, 1f)
-        }
-
-        fun Float4.toFloat3(): Float3 {
-            return this.xyz.div(this.w)
-        }
-
-        val projection = Mat4()
-        projection[2, 3] = -1 / camera.z
-
-        for (face in faces) {
-            val screenCoords = Array(3) { Float3() }
-            val worldCoords = Array(3) { Float3() }
-            val textureCoords = Array(3) { Float3() }
-
-            for (i in 0..2) {
-                val v = (projection * vertices[face[i][0]].toFloat4()).toFloat3()
-                screenCoords[i].x = ((v.x + 1.0f) * image.width / 2.0f + 0.5f).roundToInt().toFloat()
-                screenCoords[i].y = ((v.y + 1.0f) * image.height / 2.0f + 0.5f).roundToInt().toFloat()
-                screenCoords[i].z = v.z
-
-                worldCoords[i] = v
-                textureCoords[i] = textures[face[i][1]]
-            }
-
-            val normalToTriangle = normalize(
-                    cross(worldCoords[2] - worldCoords[0], worldCoords[1] - worldCoords[0])
-            )
-            val intesity = dot(normalToTriangle, lightDirection)
-
-            if (intesity > 0) {
-                image.triangle(screenCoords[0], screenCoords[1], screenCoords[2], zBuffer,
-                        textureCoords[0], textureCoords[1], textureCoords[2], textureMap, intesity)
-            }
-        }
     }
 }
