@@ -24,6 +24,19 @@ public:
     Vec3f diffuseColor;
 };
 
+struct Light {
+public:
+    Light(const Vec3f& p, const float& i)
+        : position(p)
+        , intensity(i)
+    {
+    }
+
+public:
+    Vec3f position;
+    float intensity;
+};
+
 struct Sphere {
 public:
     Sphere(const Vec3f c, const float r, const Material m)
@@ -90,7 +103,9 @@ bool sceneIntersect(const Vec3f& orig, const Vec3f& dir,
     return spheresDist < 1000.f;
 }
 
-Vec3f castRay(const Vec3f& orig, const Vec3f& dir, const std::vector<Sphere>& spheres)
+Vec3f castRay(const Vec3f& orig, const Vec3f& dir,
+    const std::vector<Sphere>& spheres,
+    const std::vector<Light>& lights)
 {
     Vec3f point, N;
     Material material;
@@ -98,10 +113,16 @@ Vec3f castRay(const Vec3f& orig, const Vec3f& dir, const std::vector<Sphere>& sp
     if (!sceneIntersect(orig, dir, spheres, point, N, material)) {
         return Vec3f(0.2, 0.7, 0.8); // background color
     }
-    return material.diffuseColor;
+
+    float diffuse_light_intensity = 0;
+    for (const auto& light : lights) {
+        const Vec3f lightDir = (light.position - point).normalize();
+        diffuse_light_intensity += light.intensity * std::max(0.f, lightDir * N);
+    }
+    return material.diffuseColor * diffuse_light_intensity;
 }
 
-void render(const std::string& filepath, const std::vector<Sphere>& spheres)
+std::vector<Vec3f> render(const std::vector<Sphere>& spheres, const std::vector<Light>& lights)
 {
     std::vector<Vec3f> framebuffer(WIDTH * HEIGHT);
 
@@ -111,11 +132,11 @@ void render(const std::string& filepath, const std::vector<Sphere>& spheres)
             float y = -(j + 0.5) + HEIGHT / 2.;
             float z = -HEIGHT / (2. * tan(FOV / 2.));
             Vec3f dir = Vec3f(x, y, z).normalize();
-            framebuffer[i + j * WIDTH] = castRay(Vec3f(0, 0, 0), dir, spheres);
+            framebuffer[i + j * WIDTH] = castRay(Vec3f(0, 0, 0), dir, spheres, lights);
         }
     }
 
-    writePPM(filepath, framebuffer);
+    return framebuffer;
 }
 
 int main()
@@ -129,6 +150,11 @@ int main()
     spheres.push_back(Sphere(Vec3f(1.5, -0.5, -18), 3, redRubber));
     spheres.push_back(Sphere(Vec3f(7, 5, -18), 4, ivory));
 
-    render("./raytracer/out.ppm", spheres);
+    std::vector<Light> lights;
+    lights.push_back(Light(Vec3f(-20, 20, 20), 1.5));
+
+    const auto buffer = render(spheres, lights);
+    writePPM("./raytracer/out.ppm", buffer);
+
     return 0;
 }
